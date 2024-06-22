@@ -16,4 +16,4 @@ Unfortunately this is a Windows only solution. Mac users will have to wait until
 * Check out or download this repository
 * Double click the .ahk file to start the script.
 
-An alternative is to simply download this repository and use the compiled .exe file (64 bit windows) so you do not have to install AutoHotKey.
+An alternative is to simply download the executable from the releases (or the exe from the repo itself) and use that compiled .exe file (64 bit windows) so you do not have to install AutoHotKey.
