@@ -1,153 +1,200 @@
 Persistent
 #SingleInstance Force
-
 SetTitleMatchMode("RegEx")
-CoordMode("Mouse", "Screen")
-
 kShift := 0x4
+kCtrl := 0x8
+kCtrlShift := 0xc
 kNone := 0x0
-regPath := "HKEY_CURRENT_USER\Software\Studio One MMBDragAndWinZoom"
+A_IconTip := "Studio One Middle-Mouse-Button Drag and MouseWheel Zoom"
+regName := "Studio One MMBDragAndWheelZoom"
+regPath := "HKEY_CURRENT_USER\Software\" . regName
 runRegPath := "HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Run"
-
-sensX := RegRead(regPath, "sensX", 4)
-sensY := RegRead(regPath, "sensY", 4)
+dragSensX := RegRead(regPath, "dragSensX", 4)
+dragSensY := RegRead(regPath, "dragSensY", 4)
 runOnStartup := RegRead(regPath, "runOnStartup", true)
-mmbPanning := RegRead(regPath, "mmbPanning", true)
-winMwZoom := RegRead(regPath, "winMwZoom", true)
+mmbDragEnabled := RegRead(regPath, "mmbDragEnabled", true)
+mwZoomEnabled := RegRead(regPath, "mwZoomEnabled", true)
+mwZoomSens := RegRead(regPath, "mwZoomSens", 100)
 
-Tray := A_TrayMenu
-Tray.Delete()
-Tray.Add("Settings", SettingsGUI)
-Tray.Add("Run on startup", ToggleRunOnStartup)
-Tray.Add()
-Tray.Add("Exit", (*) => ExitApp())
-Tray.Default := "Settings"
-A_IconTip := "Studio One Middle-Mouse-Button Drag and WIN+MouseWheel Zoom"
-TraySetIcon(A_WorkingDir . "\s1+mouse.ico")
+sensOptions := ["Lowest", "Lower", "Low", "Default", "Fast", "Faster", "Fastest"]
+mwZoomSensValues := [10, 20, 35, 50, 80, 100, 150]
 
-If (runOnStartup) {
-	Tray.Check("Run on startup")
-	RegWrite(A_ScriptFullPath, "REG_SZ", runRegPath, "Studio One MMBDragAndWinZoom")
-} else {
-	Tray.Uncheck("Run on startup")
-	Try RegDelete(runRegPath, "Studio One MMBDragAndWinZoom")
+DragSensXSubmenu := Menu()
+DragSensYSubmenu := Menu()
+ZoomSensSubmenu := Menu()
+
+Loop sensOptions.Length {
+	DragSensXSubmenu.Add(sensOptions[A_Index], SensitivityMenuItemHandler)
+	DragSensYSubmenu.Add(sensOptions[A_Index], SensitivityMenuItemHandler)
+	ZoomSensSubmenu.Add(sensOptions[A_Index], SensitivityMenuItemHandler)
 }
 
-SettingsGUI(Item, *) {
-	global sensX, sensY, mmbPanning, winMwZoom
-	myGui := Gui()
-	myGui.Show("W240 H180")
-	myGui.Add("Text", , "Sensitivity X:")
-	ogcGuiSensXEdit := myGui.Add("Edit", "vGuiSensXEdit")
-	ogcUpDownGuiSensX := myGui.Add("UpDown", "vGuiSensX Range1-50", sensX)
-	myGui.Add("Text", , "Sensitivity Y:")
-	ogcGuiSensYEdit := myGui.Add("Edit", "vGuiSensYEdit")
-	ogcUpDownGuiSensY := myGui.Add("UpDown", "vGuiSensY Range1-50", sensY)
-	ogcCheckboxGuiMmbPanning := myGui.Add("Checkbox", "vGuiMmbPanning", "Enable Middle Mouse Button Panning")
-	ogcCheckboxGuiMmbPanning.Value := mmbPanning
-	ogcCheckboxGuiwinMwZoom := myGui.Add("Checkbox", "vGuiwinMwZoom", "Enable Win+MouseWheel Zoom")
-	ogcCheckboxGuiwinMwZoom.Value := winMwZoom
-	ogcButtonOK := myGui.Add("Button", "Default", "OK")
-	ogcButtonOK.OnEvent("Click", (*) => ButtonOK(myGui, ogcUpDownGuiSensX, ogcUpDownGuiSensY, ogcCheckboxGuiMmbPanning, ogcCheckboxGuiwinMwZoom))
+runOnStartupText := "Run on startup"
+mmbDragEnabledText := "Middle Mouse Button Drag enabled"
+mwZoomEnabledText := "Mousewheel zoom enabled"
+
+A_TrayMenu.Delete()
+A_TrayMenu.Add(runOnStartupText, ToggleSetting)
+A_TrayMenu.Add()
+A_TrayMenu.Add(mmbDragEnabledText, ToggleSetting)
+A_TrayMenu.Add("Drag sensitivity X", DragSensXSubmenu)
+A_TrayMenu.Add("Drag sensitivity Y", DragSensYSubmenu)
+A_TrayMenu.Add()
+A_TrayMenu.Add(mwZoomEnabledText, ToggleSetting)
+A_TrayMenu.Add("Zoom sensitivity", ZoomSensSubmenu)
+A_TrayMenu.Add()
+A_TrayMenu.Add("Exit", (*) => ExitApp())
+
+if FileExist(A_WorkingDir . "\s1+mouse.ico")
+	TraySetIcon(A_WorkingDir . "\s1+mouse.ico")
+
+SaveSettings()
+
+ToggleSetting(menuItem, *) {
+	global runOnStartup, mmbDragEnabled, mwZoomEnabled
+
+	If (menuItem = runOnStartupText)
+		runOnStartup := !runOnStartup
+
+	If (menuItem = mmbDragEnabledText)
+		mmbDragEnabled := !mmbDragEnabled
+
+	If (menuItem = mwZoomEnabledText)
+		mwZoomEnabled := !mwZoomEnabled
+
+	SaveSettings()
 }
 
-ButtonOK(myGui, sensXCtrl, sensYCtrl, mmbPanningCtrl, winMwZoomCtrl, *) {
-	global sensX, sensY, mmbPanning, winMwZoom, regPath
-	sensX := sensXCtrl.Value
-	sensY := sensYCtrl.Value
-	mmbPanning := mmbPanningCtrl.Value
-	winMwZoom := winMwZoomCtrl.Value
-
-	myGui.Hide()
-
-	RegWrite(sensX, "REG_DWORD", regPath, "sensX")
-	RegWrite(sensY, "REG_DWORD", regPath, "sensY")
-	RegWrite(mmbPanning, "REG_DWORD", regPath, "mmbPanning")
-	RegWrite(winMwZoom, "REG_DWORD", regPath, "winMwZoom")
-	return
+SensitivityMenuItemHandler(Item, ItemPos, TheMenu) {
+	global dragSensX, dragSensY, mwZoomSens
+	dragSensX := (TheMenu = DragSensXSubmenu) ? ItemPos : dragSensX
+	dragSensY := (TheMenu = DragSensYSubmenu) ? ItemPos : dragSensY
+	mwZoomSens := (TheMenu = ZoomSensSubmenu) ? mwZoomSensValues[ItemPos] : mwZoomSens
+	SaveSettings()
 }
 
-ToggleRunOnStartup(Item, *) {
-	global runOnStartup, runRegPath
-	runOnStartup := !runOnStartup
-	If (runOnStartup) {
-		Tray.Check("Run on startup")
-		RegWrite(A_ScriptFullPath, "REG_SZ", runRegPath, "Studio One MMBDragAndWinZoom")
-	} Else {
-		Tray.Uncheck("Run on startup")
-		RegDelete(runRegPath, "Studio One MMBDragAndWinZoom")
-	}
+SaveSettings() {
 	RegWrite(runOnStartup, "REG_DWORD", regPath, "runOnStartup")
+	RegWrite(dragSensX, "REG_DWORD", regPath, "dragSensX")
+	RegWrite(dragSensY, "REG_DWORD", regPath, "dragSensY")
+	RegWrite(mmbDragEnabled, "REG_DWORD", regPath, "mmbDragEnabled")
+	RegWrite(mwZoomEnabled, "REG_DWORD", regPath, "mwZoomEnabled")
+	RegWrite(mwZoomSens, "REG_DWORD", regPath, "mwZoomSens")
+
+	If (runOnStartup)
+		RegWrite(A_ScriptFullPath, "REG_SZ", runRegPath, regName)
+	Else
+		Try RegDelete(runRegPath, regName)
+
+	UpdateMenuState()
+}
+
+UpdateMenuState() {
+	If (runOnStartup)
+		A_TrayMenu.Check(runOnStartupText)
+	Else
+		A_TrayMenu.Uncheck(runOnStartupText)
+
+	If (mmbDragEnabled) {
+		A_TrayMenu.Check(mmbDragEnabledText)
+		A_TrayMenu.Enable("Drag sensitivity X")
+		A_TrayMenu.Enable("Drag sensitivity Y")
+	}
+	Else {
+		A_TrayMenu.Uncheck(mmbDragEnabledText)
+		A_TrayMenu.Disable("Drag sensitivity X")
+		A_TrayMenu.Disable("Drag sensitivity Y")
+	}
+
+	If (mwZoomEnabled) {
+		A_TrayMenu.Check(mwZoomEnabledText)
+		A_TrayMenu.Enable("Zoom sensitivity")
+	}
+	Else {
+		A_TrayMenu.Uncheck(mwZoomEnabledText)
+		A_TrayMenu.Disable("Zoom sensitivity")
+	}
+
+	Loop sensOptions.Length {
+		DragSensXSubmenu.Uncheck(sensOptions[A_Index])
+		DragSensYSubmenu.Uncheck(sensOptions[A_Index])
+		ZoomSensSubmenu.Uncheck(sensOptions[A_Index])
+	}
+
+	DragSensXSubmenu.Check(sensOptions[dragSensX])
+	DragSensYSubmenu.Check(sensOptions[dragSensY])
+
+	For i, v in mwZoomSensValues {
+		if (v = mwZoomSens)
+			ZoomSensSubmenu.Check(sensOptions[i])
+	}
 }
 
 CheckWin() {
 	MouseGetPos(, , &wnd)
 	exe := WinGetProcessName("ahk_id " wnd)
-	exe := StrLower(exe)
-
-	Return (exe = "studio one.exe")
+	Return (StrLower(exe) = "studio one.exe")
 }
 
-#HotIf CheckWin() and mmbPanning
-MButton:: {
-	global lastX, lastY, startX, startY, dragWnd, sensX, sensY, kShift, kNone
-	MouseGetPos(&lastX, &lastY)
-	MouseGetPos(&startX, &startY, &dragWnd)
+HandleMiddleButton() {
+	global lastX, lastY, startX, startY, s1Window, winKeyPressed
+	winKeyPressed := GetKeyState("LWin", "P") || GetKeyState("RWin", "P")
+	MouseGetPos(&startX, &startY, &s1Window)
+	lastX := startX
+	lastY := startY
 	SetTimer(Timer, 10)
-	return
 }
 
-MButton Up:: {
+ReleaseMiddleButton() {
 	SetTimer(Timer, 0)
-	If (not mmbPanning) {
+	If (not mmbDragEnabled) {
 		Send("{MButton Up}")
 	}
-	return
-}
-#HotIf
-
-A_MenuMaskKey := "vkE8"
-
-#HotIf CheckWin() and winMwZoom
-#WheelDown:: {
-	CoordMode("Mouse", "Screen")
-	MouseGetPos(&mX, &mY, &tWnd)
-	PostMessage(0x20A, -40 << 16 | 0x8 , mY << 16 | mX, , "ahk_id " tWnd)
-	PostMessage(0x20A, -40 << 16 | 0xc , mY << 16 | mX, , "ahk_id " tWnd)
 }
 
-#WheelUp:: {
-	CoordMode("Mouse", "Screen")
-	MouseGetPos(&mX, &mY, &tWnd)
-	PostMessage(0x20A, 40 << 16 | 0x8, mY << 16 | mX, , "ahk_id " tWnd)
-	PostMessage(0x20A, 40 << 16 | 0xc, mY << 16 | mX, , "ahk_id " tWnd)
+HandleMouseWheel(delta) {
+	global s1Window
+	MouseGetPos(&mX, &mY, &s1Window)
+	PostMW(delta, kCtrl, mX, mY)
+	PostMW(delta, kCtrlShift, mX, mY)
 }
-#HotIf
 
-PostMW(hWnd, delta, modifiers, x, y) {
+PostMW(delta, modifiers, x, y) {
+	; global s1Window
 	CoordMode("Mouse", "Screen")
 	lowOrderX := x & 0xFFFF
 	highOrderY := y & 0xFFFF
-	PostMessage(0x20A, delta << 16 | modifiers, highOrderY << 16 | lowOrderX, , "ahk_id " hWnd)
+	PostMessage(0x20A, delta << 16 | modifiers, highOrderY << 16 | lowOrderX, , "ahk_id " s1Window)
 }
 
 Timer() {
-	global lastX, lastY, startX, startY, dragWnd, sensX, sensY, kShift, kNone
+	global lastX, lastY
 	MouseGetPos(&curX, &curY)
 	dX := (curX - lastX)
 	dY := (curY - lastY)
-	scrollX := dX * sensX
-	scrollY := dY * sensY
+	scrollX := dX * dragSensX
+	scrollY := dY * dragSensY
 
 	If (dX != 0) {
-		PostMW(dragWnd, scrollX, kShift, startX, startY)
+		PostMW(scrollX, kShift, startX, startY)
 	}
 
-	If (dY != 0) {
-		PostMW(dragWnd, scrollY, kNone, startX, startY)
+	If (dY != 0 && !winKeyPressed) {
+		PostMW(scrollY, kNone, startX, startY)
 	}
 
 	lastX := curX
 	lastY := curY
-	return
 }
+
+#HotIf CheckWin() and mmbDragEnabled
+MButton::HandleMiddleButton()
+#MButton::HandleMiddleButton()
+MButton Up::ReleaseMiddleButton()
+#MButton Up::ReleaseMiddleButton()
+#HotIf
+
+#HotIf CheckWin() and mwZoomEnabled
+#WheelDown::HandleMouseWheel(-mwZoomSens)
+#WheelUp::HandleMouseWheel(mwZoomSens)
+#HotIf
