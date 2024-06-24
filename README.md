@@ -1,4 +1,4 @@
-# Studio One Middle Mouse Button Dragg &amp; Win+Mousewheel Pinch to Zoom
+# Studio One Middle Mouse Button Drag &amp; Win+Mousewheel Pinch to Zoom
 
 This AutoHotKey V2 script enables you to use the MMB (Middle Mouse Button) to drag the view of your arrangement, piano-roll etc, and allows you to use the WIN+MouseWheel to zoom horizontally and vertically at the same time (like "pinch to zoom"). Functionality can be enabled/disabled and adjusted using the tray icon. It also comes with a "Run at startup" toggle so that you can start it up when your system boots and not have to think about it anymore.
 
