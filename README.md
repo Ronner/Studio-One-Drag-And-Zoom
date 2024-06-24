@@ -1,6 +1,6 @@
-# Studio One MMB Drag &amp; Win+Mousewheel Zoom or Alt+Mousewheel Zoom
+# Studio One Middle Mouse Button Dragg &amp; Win+Mousewheel Pinch to Zoom
 
-This AutoHotKey V2 script enables you to use the MMB (Middle Mouse Button) to drag the view of your arrangement, and allows you to use the WIN+MouseWheel or ALT+MouseWheel to zoom both horizontally and vertically (like "pinch to zoom"). It comes with a settings screens that allows you to enable/disable certain functionality and to adjust the dragging sensitivity to your liking. It also comes with a "Run at startup" toggle so that you can start it up when your system boots and not have to think about it anymore.
+This AutoHotKey V2 script enables you to use the MMB (Middle Mouse Button) to drag the view of your arrangement, piano-roll etc, and allows you to use the WIN+MouseWheel to zoom horizontally and vertically at the same time (like "pinch to zoom"). Functionality can be enabled/disabled and adjusted using the tray icon. It also comes with a "Run at startup" toggle so that you can start it up when your system boots and not have to think about it anymore.
 
 Credits for the dragging part go to the contributers of this Github Repo: https://github.com/lokanchung/StudioPlusOne
 
@@ -19,9 +19,8 @@ Simply download the compiled .exe file from the [releases](https://github.com/Ro
 ## 2. Using AutoHotKey V2 
 * Install AutoHotKey V2, which can be downloaded from the official [AutoHotKey.com](https://www.autohotkey.com/) website.
 * Check out or download this repository.
-  * You can also download only the .ahk file of the WIN or ALT version. In that case you also need to download the s1+mouse.ico file and put it in the same directory as the .ahk file.
-* Double click the WIN or ALT .ahk file to start the script. The WIN+Mousewheel version works much better, so I would advise to use that one.
+* Double click the .ahk file to start the script.
 
-# Caution
+# Caution when dragging on the console!
 
-The Alt+Mousewheel version can get really slow and clunky to use. This is probably due to the SendInput commands waiting for acknowledgement from Studio One, or some other reason that Studio One slows things down when the ALT key is pressed down. The WIN+Mousewheel version does not have this problem and performs way better.
+When using the MMB dragging on the console it has all kinds of side effects. This is due to the fact that to achieve the dragging functionality the script sends mousewheel commands. However, when using mousewheel on the console without shift results in moving faders and other setttings. To still allow MMB dragging on the console, you must keep the WIN key pressed so that the dragging only sends "Shift+Mousewheel" commands to Studio one.
