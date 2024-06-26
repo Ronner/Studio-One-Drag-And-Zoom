@@ -31,8 +31,8 @@ Running either the .exe or the .ahk file will not popup a program window. The on
 
 ![image](https://github.com/Ronner/Studio-One-Drag-And-Zoom/assets/2070774/6f8a1a85-489c-446c-a553-ff459d73b834)
 
-If you do not see this icon, click on the "arrow up" icon on the left to show all tray icons available.
-
 Simply rightclick on this icon to show the settings menu.
 
 ![image](https://github.com/Ronner/Studio-One-Drag-And-Zoom/assets/2070774/b226d1fc-1e03-4d1f-aa42-a002ac19bfde)
+
+If you do not see the icon, click on the "arrow up" icon on the left to show all tray icons available. It should be available there.
